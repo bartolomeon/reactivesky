@@ -2,9 +2,9 @@
 
 
 ### Prequisities ###
-JDK 10
-Maven
-Docker
+* JDK 10
+* Maven
+* Docker
 
 ### setting up a docker container with MongoDB ###
 
