@@ -1,13 +1,10 @@
 package pl.consileon.javips.reactivesky;
 
-import java.time.Duration;
 import java.util.Collections;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -21,18 +18,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import pl.consileon.javips.reactivesky.model.AircraftState;
-import pl.consileon.javips.reactivesky.repository.AircraftStateRepository;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Configuration
 public class WebSocketsServerConfig {
 
     private final Logger logger = LoggerFactory.getLogger( WebSocketsServerConfig.class );
-
-    @Autowired
-    private AircraftStateRepository repository;
 
     @Bean
     WebSocketHandlerAdapter socketHandlerAdapter() {
@@ -50,16 +41,22 @@ public class WebSocketsServerConfig {
         }
     }
 
-    @Bean
-    public WebSocketHandler getAllStatesHandler() {
+    @Autowired
+    private Flux<AircraftState> aircraftStateChangeStream;
 
-        return session -> session.send( //
-                repository.findAll().take( 500 ) //
-                        .map( this::convertToJson ) //
-                        .map( session::textMessage ) //
-                        .onTerminateDetach() //
-                        .doOnSubscribe( sub -> logger.info( session.getId() + " OPEN." ) ) )//
-                .and( //
+    @Bean
+    public WebSocketHandler getAircraftStatesHandler() {
+
+        Flux<AircraftState> inputStream = aircraftStateChangeStream //
+                .filter( state -> "Poland".equals( state.getOriginCountry() ) ) //
+                .filter( state -> !state.isOnGround() );
+
+        return session -> session.send( inputStream //
+                .map( this::convertToJson ) //
+                .map( session::textMessage ) //
+                .onTerminateDetach() //
+                .doOnSubscribe( sub -> logger.info( session.getId() + " OPEN." ) ) )//
+                .and( //stream of the messages from client:
                         session.receive() //
                                 .map( WebSocketMessage::getPayloadAsText ) //
                                 .doOnNext( System.out::println ) //
@@ -71,7 +68,7 @@ public class WebSocketsServerConfig {
     @Bean
     HandlerMapping simpleUrlHandlerMapping() {
         SimpleUrlHandlerMapping simpleUrlHandlerMapping = new SimpleUrlHandlerMapping();
-        simpleUrlHandlerMapping.setUrlMap( Collections.singletonMap( "/ws/states", getAllStatesHandler() ) );
+        simpleUrlHandlerMapping.setUrlMap( Collections.singletonMap( "/ws/states", getAircraftStatesHandler() ) );
         simpleUrlHandlerMapping.setOrder( Ordered.HIGHEST_PRECEDENCE );
         return simpleUrlHandlerMapping;
     }

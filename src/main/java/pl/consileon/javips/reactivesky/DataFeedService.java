@@ -22,13 +22,15 @@ public class DataFeedService {
     @Autowired
     private OpenSkyService openSkyService;
 
-    //@Scheduled(fixedRate = 10000)
+    @Scheduled(fixedRate = 8000)
     public void retrieveData() {
 
         Flux<AircraftState> statesStream = openSkyService //
-                .retrieveStates().log(); //
+                .retrieveStates(); //
 
-        aircraftStateRepository.insert( statesStream ).blockLast();
+        aircraftStateRepository.insert( statesStream ) //
+                .count() //
+                .subscribe( count -> logger.info( "Received {} elements from OpenSky.", count ) );
 
     }
 
