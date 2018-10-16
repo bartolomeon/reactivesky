@@ -10,47 +10,45 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.ChangeStreamEvent;
 import org.springframework.data.mongodb.core.ChangeStreamOptions;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
-import org.springframework.stereotype.Component;
 
 import pl.consileon.javips.reactivesky.model.AircraftState;
-import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.EmitterProcessor;
 import reactor.core.publisher.Flux;
 
+/**
+ * @author bartek
+ *
+ */
 @Configuration
-public class DataProvider {
+public class AircraftDataProvider {
 
     private static final String COLLECTION_NAME = "aircraftState";
-    
+
     @Autowired
     private ReactiveMongoTemplate mongoTemplate;
-    
-    @Bean(name="aircraftStateChangeStream")
+
+    /**
+     * Singleton providing a stream of updates for aircrafts data. Multiple clients can subscribe since it is backed by an EmmiterProcessor.
+     * 
+     * @see 
+     *  <a href="https://github.com/spring-projects/spring-data-examples/blob/master/mongodb/change-streams/src/test/java/example/springdata/mongodb/ChangeStreamsTests.java">ChangeStreamsTests.java </a>
+     * 
+     * @return stream of recently received aircrafts' data
+     */
+    @Bean(name = "aircraftStateChangeStream")
     public Flux<AircraftState> getChangeStream() {
 
-        
-        //https://github.com/spring-projects/spring-data-examples/blob/master/mongodb/change-streams/src/test/java/example/springdata/mongodb/ChangeStreamsTests.java
-        
-        Flux<ChangeStreamEvent<AircraftState>> changeStream 
-            = mongoTemplate.changeStream(COLLECTION_NAME, ChangeStreamOptions.builder()
-                    
-                    .filter(newAggregation( match ( where("operationType").is("insert")))).build(),
-                AircraftState.class);
-        
+        Flux<ChangeStreamEvent<AircraftState>> changeStream = mongoTemplate.changeStream( COLLECTION_NAME, ChangeStreamOptions.builder()
+
+                .filter( newAggregation( match( where( "operationType" ).is( "insert" ) ) ) ).build(), AircraftState.class );
+
         Flux<AircraftState> statesStream = changeStream.map( ChangeStreamEvent::getBody );
-        
-        
-        EmitterProcessor<AircraftState> p = EmitterProcessor.create(100);
-        
-        //DirectProcessor<AircraftState> dp = DirectProcessor.create();
-        statesStream.subscribe(p);
-        
-        //dp.subscribe(System.err::println);
-        
-        
-        
-        
+
+        EmitterProcessor<AircraftState> p = EmitterProcessor.create();
+
+        statesStream.subscribe( p );
+
         return statesStream;
     }
-    
+
 }

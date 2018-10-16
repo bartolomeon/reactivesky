@@ -13,6 +13,12 @@ import pl.consileon.javips.reactivesky.model.AircraftState;
 import pl.consileon.javips.reactivesky.openskyapi.OpenSkyStateEntry.StateField;
 import reactor.core.publisher.Flux;
 
+/**
+ * A service which reads the latest update from OpenSky API (REST), converts the retrieved data into locak entity AircraftState
+ * 
+ * @author bartek
+ *
+ */
 @Service
 public class OpenSkyService {
 

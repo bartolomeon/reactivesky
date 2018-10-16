@@ -1,4 +1,4 @@
-package pl.consileon.javips.reactivesky;
+package pl.consileon.javips.reactivesky.web;
 
 import java.util.Collections;
 
@@ -47,6 +47,7 @@ public class WebSocketsServerConfig {
     @Bean
     public WebSocketHandler getAircraftStatesHandler() {
 
+        //some filtering of the data feed:
         Flux<AircraftState> inputStream = aircraftStateChangeStream //
                 .filter( state -> "Poland".equals( state.getOriginCountry() ) ) //
                 .filter( state -> !state.isOnGround() );
